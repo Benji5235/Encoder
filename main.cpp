@@ -5,10 +5,13 @@
 
 //Declarations for encoders & motors
 //This is a change required for reasons also Evan lol
-DigitalEncoder right_encoder(FEHIO::P0_0);
-DigitalEncoder left_encoder(FEHIO::P0_1);
-FEHMotor right_motor(FEHMotor::Motor1,9.0);
-FEHMotor left_motor(FEHMotor::Motor3,9.0);
+DigitalEncoder right_encoder(FEHIO::P1_0);
+DigitalEncoder left_encoder(FEHIO::P2_0);
+DigitalEncoder forward_encoder(FEHIO::P0_1);
+FEHMotor right_motor(FEHMotor::Motor0,9.0);
+FEHMotor left_motor(FEHMotor::Motor1,9.0);
+FEHMotor forward_motor(FEHMotor::Motor2,9.0);
+
 
 void move_forward(int percent, int counts) //using encoders
 {
@@ -18,7 +21,7 @@ void move_forward(int percent, int counts) //using encoders
 
     //Set both motors to desired percent
     right_motor.SetPercent(percent);
-    left_motor.SetPercent(percent);
+    left_motor.SetPercent(-(percent));
 
     //While the average of the left and right encoder is less than counts,
     //keep running motors
@@ -38,7 +41,7 @@ void turn_left()
 
     //Set both motors to desired percent
     left_motor.Stop();
-    right_motor.SetPercent(-30);
+    right_motor.SetPercent(30);
 
     //While the average of the left and right encoder is less than counts,
     //keep running motors
@@ -85,11 +88,11 @@ int main(void)
     while(!LCD.Touch(&x,&y)); //Wait for screen to be pressed
     while(LCD.Touch(&x,&y)); //Wait for screen to be unpressed
 
-    move_forward(motor_percent, 567); //see function
-    turn_left();
-    move_forward(motor_percent, 405);
-    turn_right();
-    move_forward(motor_percent, 162);
+    move_forward(motor_percent, 1200); //see function
+    Sleep(10.0);
+    move_forward(motor_percent, 1200);
+    Sleep(1.0);
+    move_forward(-motor_percent, 1200);
 
     Sleep(2.0); //Wait for counts to stabilize
     //Print out data
