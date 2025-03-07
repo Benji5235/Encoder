@@ -9,7 +9,7 @@
 #define pi 3.14159
 #define one_inch 318/(pi*2.0*1.25)
 #define one_degree 21.2/360.0
-#define red_value 0.7
+#define red_value 0.9
 #define blue_value_low 1.1
 #define blue_value_high 1.8
 #define line 1.5
@@ -207,7 +207,7 @@ int main(void)
     while(LCD.Touch(&x,&y));    
     while(CdS_cell.Value()>red_value);  
     
-    /*2. Drives up ramp  FIX THIS, QUESTIONABLE BECAUSE MOTOR POWER VARIABILITY*/
+    /*2. Drives up ramp to table*/
     move_forward(35, 35, 3);
     //Sleep(2.0); //Pauses to move right
     //move_right(30, 1.5);  //TEST
@@ -216,12 +216,14 @@ int main(void)
     Sleep(0.50);
     backward_motor.Stop();
     left_motor.Stop();
-    move_forward(40, 40, 25);
-    move_forward(35, 35, 8.8);
+    move_forward(50, 49, 25);
+    move_forward(35, 35, 15.0);
 
     /*3. Goes up to light to read CdS cell value IF ROBOT VEERS TOO MUCH WHILE TRAVELING RAMP CAUSES PROBLEM, ALSO DISTANCE TO LIGHT IS VARIABLE*/
+    move_forward(-35, -35, 3.5);   //Next three lines use table, go backwards, turn, flush with wall, go
     turn_left(30, 88);  
-    move_forward(35, 35, 15.4);
+    move_forward(-35, -35, 4.0);
+    move_forward(36, 35, 16.25);
     Sleep(2.0); //Pauses before reading value
     int value = detect_color(CdS_cell.Value());
     LCD.WriteLine(CdS_cell.Value());
@@ -249,20 +251,28 @@ int main(void)
     }
     else
     {
-        LCD.WriteLine("Not within range.  Exiting...");
+        LCD.WriteLine("Blue");
+        //move_left(30, 2.0);   //TEST
+        backward_motor.SetPercent(-30);  //BACKUP
+        left_motor.SetPercent(30);
+        Sleep(0.25);
+        backward_motor.Stop();
+        left_motor.Stop();
+        move_forward(30, 30, 10);
+        
     }
     LCD.WriteLine(value);   //Displays the result of the detect_color method
 
-    move_forward(-30, -30, 24);
-    move_forward(30, 30, 4);
+    move_forward(-35, -35, 24);
+    move_forward(35, 35, 5);
     turn_left(30, 90);
-    move_forward(30, 30, 32);
+    move_forward(31, 30, 32);
     backward_motor.SetPercent(30);   //BACKUP
     right_motor.SetPercent(-30);
-    Sleep(0.25);
+    Sleep(0.125);
     backward_motor.Stop();
     right_motor.Stop();
-    move_forward(30, 30, 15);
+    move_forward(30, 40, 15);
 
     return 0;
 }
