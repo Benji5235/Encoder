@@ -53,11 +53,31 @@ void move_right(int percent, double inches)
 {
     //Reset encoder counts
     backward_encoder.ResetCounts();
-    left_encoder.ResetCounts();
+    right_encoder.ResetCounts();
 
     backward_motor.SetPercent(percent);
-    left_motor.SetPercent(-percent);
+    right_motor.SetPercent(-percent);
     
+    //While the average of the left and back encoder is less than counts,
+    //keep running motors
+    while((right_encoder.Counts() + backward_encoder.Counts()) / 2. < (inches-1.2)*one_inch);
+
+    //Turn off motors
+    backward_motor.Stop();
+    right_motor.Stop();
+}
+
+//Drives the robot to the left given a speed and how many inches it needs to travel
+void move_left(int percent, double inches)
+{
+    //Reset encoder counts
+    backward_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    backward_motor.SetPercent(-percent);
+    left_motor.SetPercent(percent);
+
     //While the average of the left and back encoder is less than counts,
     //keep running motors
     while((left_encoder.Counts() + backward_encoder.Counts()) / 2. < (inches-1.2)*one_inch);
@@ -65,26 +85,6 @@ void move_right(int percent, double inches)
     //Turn off motors
     backward_motor.Stop();
     left_motor.Stop();
-}
-
-//Drives the robot to the left given a speed and how many inches it needs to travel
-void move_left(int percent, double inches)
-{
-    //Reset encoder counts
-    right_encoder.ResetCounts();
-    backward_encoder.ResetCounts();
-
-    //Set both motors to desired percent
-    backward_motor.SetPercent(-percent);
-    right_motor.SetPercent(percent);
-
-    //While the average of the left and back encoder is less than counts,
-    //keep running motors
-    while((right_encoder.Counts() + backward_encoder.Counts()) / 2. < (inches-1.2)*one_inch);
-
-    //Turn off motors
-    right_motor.Stop();
-    backward_motor.Stop();
 }
 
 /*Turn functions*/
@@ -103,7 +103,7 @@ void turn_left(int percent, int degrees)
  
     //While the average of the left and right encoder is less than counts,
     //keep running motors
-    while((left_encoder.Counts() + right_encoder.Counts() + backward_encoder.Counts()) / 3. < one_degree*degrees*one_inch);
+    while((left_encoder.Counts() + right_encoder.Counts() + backward_encoder.Counts()) / 3. < one_degree*(degrees-2.0)*one_inch);
  
     //Turn off motors
     right_motor.Stop();
@@ -126,7 +126,7 @@ void turn_right(int percent, int degrees)
 
     //While the average of the left and right encoder is less than counts,
     //keep running motors
-    while((left_encoder.Counts() + right_encoder.Counts() + backward_encoder.Counts()) / 3. < one_degree*degrees*one_inch);
+    while((left_encoder.Counts() + right_encoder.Counts() + backward_encoder.Counts()) / 3. < one_degree*(degrees-2.0)*one_inch);
 
     //Turn off motors
     right_motor.Stop();
@@ -209,19 +209,13 @@ int main(void)
     
     /*2. Drives up ramp to table*/
     move_forward(35, 35, 3);
-    //Sleep(2.0); //Pauses to move right
-    //move_right(30, 1.5);  //TEST
-    backward_motor.SetPercent(35);   //BACKUP
-    left_motor.SetPercent(-35);
-    Sleep(0.50);
-    backward_motor.Stop();
-    left_motor.Stop();
+    move_right(35, 3.5);  //TEST
     move_forward(50, 49, 25);
     move_forward(35, 35, 15.0);
 
-    /*3. Goes up to light to read CdS cell value IF ROBOT VEERS TOO MUCH WHILE TRAVELING RAMP CAUSES PROBLEM, ALSO DISTANCE TO LIGHT IS VARIABLE*/
-    move_forward(-35, -35, 3.5);   //Next three lines use table, go backwards, turn, flush with wall, go
-    turn_left(30, 88);  
+    /*3. Goes up to light to read CdS cell value*/
+    move_forward(-35, -35, 3.5);
+    turn_left(30, 90);
     move_forward(-35, -35, 4.0);
     move_forward(36, 35, 16.25);
     Sleep(2.0); //Pauses before reading value
@@ -231,47 +225,24 @@ int main(void)
 
     /*4. Move depending on CdS value, includes failure condition*/
     if (CdS_cell.Value()<red_value){
-        //move_right(30, 2.0);  //TEST
-        backward_motor.SetPercent(30);   //BACKUP
-        right_motor.SetPercent(-30);
-        Sleep(0.25);
-        backward_motor.Stop();
-        right_motor.Stop();
+        move_right(35, 3.5);
         move_forward(30, 30, 10);
     }
     else if (CdS_cell.Value()>blue_value_low && CdS_cell.Value()<blue_value_high)
     {
-        //move_left(30, 2.0);   //TEST
-        backward_motor.SetPercent(-30);  //BACKUP
-        left_motor.SetPercent(30);
-        Sleep(0.25);
-        backward_motor.Stop();
-        left_motor.Stop();
+        move_left(35, 3.5); 
         move_forward(30, 30, 10);
     }
     else
     {
-        LCD.WriteLine("Blue");
-        //move_left(30, 2.0);   //TEST
-        backward_motor.SetPercent(-30);  //BACKUP
-        left_motor.SetPercent(30);
-        Sleep(0.25);
-        backward_motor.Stop();
-        left_motor.Stop();
-        move_forward(30, 30, 10);
-        
+        LCD.WriteLine("Light not detected. Failure...");
     }
-    LCD.WriteLine(value);   //Displays the result of the detect_color method
+    LCD.WriteLine(value);   
 
     move_forward(-35, -35, 24);
     move_forward(35, 35, 5);
     turn_left(30, 90);
     move_forward(31, 30, 32);
-    backward_motor.SetPercent(30);   //BACKUP
-    right_motor.SetPercent(-30);
-    Sleep(0.125);
-    backward_motor.Stop();
-    right_motor.Stop();
     move_forward(30, 40, 15);
 
     return 0;
