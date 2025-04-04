@@ -5,6 +5,7 @@
 #include <FEHMotor.h>
 #include <FEHBattery.h>
 #include <FEHServo.h>
+#include <FEHRCS.h>
 
 /*Defines constants*/
 #define pi 3.14159
@@ -14,8 +15,10 @@
 #define blue_value_low 1.1
 #define blue_value_high 1.8
 #define line 1.5
-#define SERVO_MIN 500
-#define SERVO_MAX 1250
+#define TOP_SERVO_MIN 928
+#define TOP_SERVO_MAX  2191
+#define BOTTOM_SERVO_MIN 928
+#define BOTTOM_SERVO_MAX 2191  
 #define actual_power 11.5/Battery.Voltage()
 
 /*Declarations for all encoders, (servo) motors, CdS cells, and optosensors*/
@@ -27,10 +30,10 @@ FEHMotor left_motor(FEHMotor::Motor2,9.0);
 FEHMotor backward_motor(FEHMotor::Motor1,9.0);
 AnalogInputPin CdS_cell(FEHIO::P2_0);
 AnalogInputPin right_opto(FEHIO::P1_3);
-AnalogInputPin left_opto(FEHIO::P1_4);
-AnalogInputPin middle_opto(FEHIO::P1_5);
+AnalogInputPin middle_opto(FEHIO::P1_4);
+AnalogInputPin left_opto(FEHIO::P1_5);
 FEHServo bottom_servo(FEHServo::Servo7);
-FEHServo top_servo(FEHServo::Servo1);
+FEHServo top_servo(FEHServo::Servo5);
 
 /*Drive functions (note that drive functions require inches > 1.2 inches)*/
 //Drives the robot forward given a speed and how many inches it needs to travel
@@ -144,32 +147,74 @@ void turn_right(int percent, int degrees)
     backward_motor.Stop();
 }
 
-/*Line following functions (requires at least one optosensor on the line)*/
+/*Lever functions*/
+void move_bottom_servo_up(int starting_degree, int ending_degree)
+{
+    for (starting_degree; starting_degree <= ending_degree; starting_degree++)
+    {
+        bottom_servo.SetDegree(starting_degree);
+        Sleep(0.01);
+    }
+    Sleep(1.0);
+}
+
+void move_top_servo_up(int starting_degree, int ending_degree)
+{
+    for (starting_degree; starting_degree <= ending_degree; starting_degree++)
+    {
+        top_servo.SetDegree(starting_degree);
+        Sleep(0.01);
+    }
+    Sleep(1.0);
+}
+
+void move_bottom_servo_down(int starting_degree, int ending_degree)
+{
+    for (starting_degree; starting_degree >= ending_degree; starting_degree--)
+    {
+        bottom_servo.SetDegree(starting_degree);
+        Sleep(0.01);
+    }
+    Sleep(1.0);
+}
+
+void move_top_servo_down(int starting_degree, int ending_degree)
+{
+    for (starting_degree; starting_degree >= ending_degree; starting_degree--)
+    {
+        top_servo.SetDegree(starting_degree);
+        Sleep(0.01);
+    }
+    Sleep(1.0);
+}
+
+/*Line following functions*/
 void line_follow(int percent, double inches)
 {
     left_encoder.ResetCounts();
     right_encoder.ResetCounts();
+    backward_encoder.ResetCounts();
 
-    while ((left_encoder.Counts() + right_encoder.Counts())/2 < (inches-1.2)*one_inch)
+    while (left_opto.Value() > line || middle_opto.Value() > line || right_opto.Value() > line)
     {
         right_motor.SetPercent(percent);
         left_motor.SetPercent(-percent);
         
         if (left_opto.Value() > line && middle_opto.Value() > line) //If needs slight left
         {
-            backward_motor.SetPercent(10);
+            backward_motor.SetPercent(10 + percent);
         }
         else if (right_opto.Value() > line && middle_opto.Value() > line)   //If needs slight right
         {
-            backward_motor.SetPercent(-10);
+            backward_motor.SetPercent(-10 - percent);
         }
         else if (left_opto.Value() > line)  //If needs strong left
         {
-            backward_motor.SetPercent(20);
+            backward_motor.SetPercent(20 + percent);
         }
         else if (right_opto.Value() > line) //If needs strong right
         {
-            backward_motor.SetPercent(-20);
+            backward_motor.SetPercent(-20 - percent);
         }
     }
     right_motor.Stop();
@@ -177,12 +222,17 @@ void line_follow(int percent, double inches)
     backward_motor.Stop();
 }
 
-/*Servo functions*/
-void move_bottom_servo(float degree){
-    bottom_servo.SetDegree(degree);
-}
-void move_top_servo(float degree){
-    top_servo.SetDegree(degree);
+void detect_line(int percent){
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+    backward_encoder.ResetCounts();
+
+    while (left_opto.Value() < line && middle_opto.Value() < line && right_opto.Value() < line){
+        right_motor.SetPercent(percent);
+        left_motor.SetPercent(-percent);
+    }
+    right_motor.Stop();
+    left_motor.Stop();
 }
 
 /*Unique functions*/
@@ -255,61 +305,68 @@ int main(void)
 {
     /*0. Initialize variables*/
     float x, y; 
-    // //Touch screen (twice?) to calibrate MIN: 546, MAX: 1431
-    // bottom_servo.TouchCalibrate();
-    // bottom_servo.SetMin(SERVO_MIN);
-    // bottom_servo.SetMin(SERVO_MAX);
-    // top_servo.TouchCalibrate();
-    // top_servo.SetMin(SERVO_MIN);
-    // top_servo.SetMin(SERVO_MAX);
+    // RCS.InitializeTouchMenu("0800A9VHR"); // This is our team code
+    // int lever = RCS.GetLever(); // Get a 0, 1, or 2 indicating which lever to pull
 
-    // move_bottom_servo(90);
-    // Sleep(2.0);
-    // move_bottom_servo(180);
-    // Sleep(2.0);
-
+    /*Testing*/
     /*1. Touch to start robot*/
     LCD.Clear(BLACK);
     LCD.SetFontColor(WHITE);
-    LCD.WriteLine("Testing:");
     LCD.WriteLine("Touch the screen");
+    // if(lever == 0){
+    //     LCD.WriteLine("Lever: A");
+    // }
+    // else if(lever == 1){
+    //     LCD.WriteLine("Lever: B");
+    // }
+    // else if(lever == 2){
+    //     LCD.WriteLine("Lever: C");
+    // }
+    // else{
+    //     LCD.WriteLine("Lever not detected");
+    // }
     LCD.WriteLine("Battery life:");
     LCD.WriteLine(Battery.Voltage());
     while(!LCD.Touch(&x,&y));
     while(LCD.Touch(&x,&y));   
     while(CdS_cell.Value()>red_value); 
 
-    /*2. Go back and push the bottom*/
-    move_right(30, 3.0);
-    Sleep(2.0);
+    /*2. Move up to compost*/
+    move_forward(30, 30, 5);
+    Sleep(0.5);
 
-    /*3. Go up the ramp*/
-    move_forward(30, 31, 3.0);
-    move_right(30, 2.0);
-    move_forward(40, 42, 32.0);
-    turn_left(30, 90);
+    /*3. First turn*/
+    move_left(30, 5.0);
+    Sleep(0.5);
+    turn_left(40, 90);
+    Sleep(0.5);
+    move_forward(-30, -30, 4.0);
+    Sleep(0.5);
+    turn_right(30, 80);
+    Sleep(0.5);
+    move_left(30, 3.0);
+
+    /*4. Second turn*/
+    move_left(30, 4.0);
+    Sleep(0.5);
+    turn_left(40, 80);
+    Sleep(0.5);
+    move_forward(-30, -30, 4.0);
+    Sleep(0.5);
+    turn_right(30, 80);
+    Sleep(0.5);
+    move_left(30, 4.0);
+
+    /*5. Last turn*/
+    move_left(40, 4.0);
+    Sleep(0.5);
+    turn_left(50, 85);
+    Sleep(0.5);
+
+    /*6. Hit button*/
+    move_left(30, 9.0);
+    turn_right(30, 90);
     move_forward(-30, -30, 5);
-    Sleep(2.0);
-
-    /*4. Slide the robot to the right to open window*/
-    move_forward(30, 30, 13.0);
-    move_right(15, 6.0);
-    turn_left(30, 90);
-    move_forward(30,30,8.0);
-    Sleep(2.0);
-    move_right_window(25, 12.0);
-    move_forward(30, 30, 5.0);
-    Sleep(2.0);
-
-    /*5. Get robot to move on opposite side of window*/
-    move_forward(-30, -30, 5.0);
-    move_right(15, 4.0);
-    move_forward(30, 30, 4.25);
-    Sleep(2.0);
-
-    /*6. Move window back to close it*/
-    move_left_window(30, 12.0);
-    move_forward(30, 30, 5.0);
 
     return 0;
 }
