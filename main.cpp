@@ -14,11 +14,7 @@
 #define red_value 0.9
 #define blue_value_low 1.1
 #define blue_value_high 1.8
-#define line 1.5
-#define TOP_SERVO_MIN 928
-#define TOP_SERVO_MAX  2191
-#define BOTTOM_SERVO_MIN 928
-#define BOTTOM_SERVO_MAX 2191  
+#define line 1.5 //1.5 is a placeholder value, will be measured eventually
 #define actual_power 11.5/Battery.Voltage()
 
 /*Declarations for all encoders, (servo) motors, CdS cells, and optosensors*/
@@ -32,10 +28,8 @@ AnalogInputPin CdS_cell(FEHIO::P2_0);
 AnalogInputPin right_opto(FEHIO::P1_3);
 AnalogInputPin middle_opto(FEHIO::P1_4);
 AnalogInputPin left_opto(FEHIO::P1_5);
-FEHServo bottom_servo(FEHServo::Servo7);
-FEHServo top_servo(FEHServo::Servo5);
 
-/*Drive functions (note that drive functions require inches > 1.2 inches)*/
+/*Drive functions (*Note that drive functions require inches > 1.2 inches)*/
 //Drives the robot forward given a speed and how many inches it needs to travel
 void move_forward(int left, int right, double inches)
 {
@@ -64,11 +58,12 @@ void move_right(int percent, double inches)
     right_encoder.ResetCounts();
     left_encoder.ResetCounts();
 
+    //Set motors to desired percent
     backward_motor.SetPercent((actual_power*percent*1.65));
     right_motor.SetPercent(actual_power*-percent);
     left_motor.SetPercent(actual_power*-percent);
     
-    //While the average of the left and back encoder is less than counts,
+    //While the average of the left, right, and back encoder is less than counts,
     //keep running motors
     while((right_encoder.Counts() + backward_encoder.Counts()) + left_encoder.Counts()/ 3. < (inches-1.2)*one_inch);
 
@@ -86,11 +81,79 @@ void move_left(int percent, double inches)
     right_encoder.ResetCounts();
     left_encoder.ResetCounts();
 
+    //Set motors to desired percent
     backward_motor.SetPercent((actual_power*-percent*1.65));
     right_motor.SetPercent(actual_power*percent);
     left_motor.SetPercent(actual_power*percent);
     
-    //While the average of the left and back encoder is less than counts,
+    //While the average of the left, right, and back encoder is less than counts,
+    //keep running motors
+    while((right_encoder.Counts() + backward_encoder.Counts()) + left_encoder.Counts()/ 3. < (inches-1.2)*one_inch);
+
+    //Turn off motors
+    backward_motor.Stop();
+    right_motor.Stop();
+    left_motor.Stop();
+}
+
+//Drives the robot forward given a speed and how many inches it needs to travel
+void move_forward_lever(int left, int right, double inches)
+{
+    //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+    backward_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    backward_motor.SetPercent(actual_power*right);
+    right_motor.SetPercent(actual_power*-left);
+
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while((backward_encoder.Counts() + right_encoder.Counts()) / 2. < (inches-1.2)*one_inch);
+
+    //Turn off motors
+    right_motor.Stop();
+    backward_motor.Stop();
+}
+
+//Drives the robot to the right given a speed and how many inches it needs to travel
+void move_right_lever(int percent, double inches)
+{
+    //Reset encoder counts
+    backward_encoder.ResetCounts();
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set motors to desired percent
+    left_motor.SetPercent((actual_power*percent*1.65));
+    right_motor.SetPercent(actual_power*-percent);
+    backward_motor.SetPercent(actual_power*-percent);
+    
+    //While the average of the left, right, and back encoder is less than counts,
+    //keep running motors
+    while((right_encoder.Counts() + backward_encoder.Counts()) + left_encoder.Counts()/ 3. < (inches-1.2)*one_inch);
+
+    //Turn off motors
+    backward_motor.Stop();
+    right_motor.Stop();
+    left_motor.Stop();
+}
+
+//Drives the robot to the left given a speed and how many inches it needs to travel
+void move_left_lever(int percent, double inches)
+{
+    //Reset encoder counts
+    backward_encoder.ResetCounts();
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set motors to desired percent
+    backward_motor.SetPercent((actual_power*-percent*1.65));
+    right_motor.SetPercent(actual_power*percent);
+    left_motor.SetPercent(actual_power*percent);
+    
+    //While the average of the left, right, and back encoder is less than counts,
     //keep running motors
     while((right_encoder.Counts() + backward_encoder.Counts()) + left_encoder.Counts()/ 3. < (inches-1.2)*one_inch);
 
@@ -109,12 +172,12 @@ void turn_left(int percent, int degrees)
     left_encoder.ResetCounts();
     backward_encoder.ResetCounts();
  
-    //Set both motors to desired percent
+    //Set motors to desired percent
     right_motor.SetPercent(actual_power*percent);
     left_motor.SetPercent(actual_power*percent);
     backward_motor.SetPercent(actual_power*percent);
  
-    //While the average of the left and right encoder is less than counts,
+    //While the average of the left, right, and back encoder is less than counts,
     //keep running motors
     while((left_encoder.Counts() + right_encoder.Counts() + backward_encoder.Counts()) / 3. < one_degree*(degrees-2.0)*one_inch);
  
@@ -132,12 +195,12 @@ void turn_right(int percent, int degrees)
     left_encoder.ResetCounts();
     backward_encoder.ResetCounts();
 
-    //Set both motors to desired percent
+    //Set motors to desired percent
     right_motor.SetPercent(actual_power*-percent);
     left_motor.SetPercent(actual_power*-percent);
     backward_motor.SetPercent(actual_power*-percent);
 
-    //While the average of the left and right encoder is less than counts,
+    //While the average of the left, right, and back encoder is less than counts,
     //keep running motors
     while((left_encoder.Counts() + right_encoder.Counts() + backward_encoder.Counts()) / 3. < one_degree*(degrees-2.0)*one_inch);
 
@@ -147,118 +210,99 @@ void turn_right(int percent, int degrees)
     backward_motor.Stop();
 }
 
-/*Lever functions*/
-void move_bottom_servo_up(int starting_degree, int ending_degree)
-{
-    for (starting_degree; starting_degree <= ending_degree; starting_degree++)
-    {
-        bottom_servo.SetDegree(starting_degree);
-        Sleep(0.01);
-    }
-    Sleep(1.0);
-}
-
-void move_top_servo_up(int starting_degree, int ending_degree)
-{
-    for (starting_degree; starting_degree <= ending_degree; starting_degree++)
-    {
-        top_servo.SetDegree(starting_degree);
-        Sleep(0.01);
-    }
-    Sleep(1.0);
-}
-
-void move_bottom_servo_down(int starting_degree, int ending_degree)
-{
-    for (starting_degree; starting_degree >= ending_degree; starting_degree--)
-    {
-        bottom_servo.SetDegree(starting_degree);
-        Sleep(0.01);
-    }
-    Sleep(1.0);
-}
-
-void move_top_servo_down(int starting_degree, int ending_degree)
-{
-    for (starting_degree; starting_degree >= ending_degree; starting_degree--)
-    {
-        top_servo.SetDegree(starting_degree);
-        Sleep(0.01);
-    }
-    Sleep(1.0);
-}
-
 /*Line following functions*/
+//YET TO BE TESTED
+//Follows a line until it reaches the line's end, requires at least one opto sensor to be on the line
 void line_follow(int percent, double inches)
 {
+    //Reset encoder counts
     left_encoder.ResetCounts();
     right_encoder.ResetCounts();
     backward_encoder.ResetCounts();
 
+    //Runs while at least one opto sensor detects the line
+    //Idea is to keep running until the robot reaches the end of the line
     while (left_opto.Value() > line || middle_opto.Value() > line || right_opto.Value() > line)
     {
+        //Sets right and left motor to desired percentages
         right_motor.SetPercent(percent);
         left_motor.SetPercent(-percent);
         
         if (left_opto.Value() > line && middle_opto.Value() > line) //If needs slight left
         {
-            backward_motor.SetPercent(10 + percent);
+            right_motor.SetPercent(10 + percent);
         }
         else if (right_opto.Value() > line && middle_opto.Value() > line)   //If needs slight right
         {
-            backward_motor.SetPercent(-10 - percent);
+            left_motor.SetPercent(-10 - percent);
         }
         else if (left_opto.Value() > line)  //If needs strong left
         {
-            backward_motor.SetPercent(20 + percent);
+            right_motor.SetPercent(20 + percent);
         }
         else if (right_opto.Value() > line) //If needs strong right
         {
-            backward_motor.SetPercent(-20 - percent);
+            left_motor.SetPercent(-20 - percent);
         }
     }
+
+    //Stops the motors
     right_motor.Stop();
     left_motor.Stop();
     backward_motor.Stop();
 }
 
+//YET TO BE TESTED
+//Drives forward until one of the opto sensors detect a line
 void detect_line(int percent){
+    //Resets encoder counts
     right_encoder.ResetCounts();
     left_encoder.ResetCounts();
     backward_encoder.ResetCounts();
 
+    //Drives forward until at least one opto sensor detects the line
     while (left_opto.Value() < line && middle_opto.Value() < line && right_opto.Value() < line){
         right_motor.SetPercent(percent);
         left_motor.SetPercent(-percent);
     }
+
+    //Stops the motors
     right_motor.Stop();
     left_motor.Stop();
 }
 
 /*Unique functions*/
-//Returns 0 if blue, 1 if red, -1 if orange, changes background color accordingly
+//Returns 0 if blue, 1 if red, -1 if orange, displays message for each color
 int detect_color(double voltage)
 {
+    //Initializes variable
     int color;
-    if (voltage<=red_value){
+    if (voltage<=red_value){    //Sets color to 1, writes "Red" in red
         color = 1;
         LCD.Clear();
-        LCD.SetBackgroundColor(RED);
+        LCD.SetFontColor(RED);
+        LCD.WriteLine("Red");
     }
-    else if (voltage >= blue_value_low && voltage <= blue_value_high){
+    else if (voltage >= blue_value_low && voltage <= blue_value_high){  //Sets color to 0, writes "Blue" in blue
         color = 0;
         LCD.Clear();
-        LCD.SetBackgroundColor(BLUE);
+        LCD.SetFontColor(BLUE);
+        LCD.WriteLine("Blue");
     }
-    else
+    else    //Sets color to -1, displays an orange failure message
     {
         color = -1;
         LCD.Clear();
-        LCD.SetBackgroundColor(ORANGE);
+        LCD.SetFontColor(ORANGE);
+        LCD.WriteLine("Color not detected...");
     }
+
+    //Returns 0, 1, or -1 depending on the CdS value
     return color;
 }
 
+//Moves the robot RIGHT SPECIFICALLY FOR THE WINDOW, assumes robot is in place
+//Takes in a movement speed and distance traveled
 void move_right_window(int percent, double inches)
 {
     //Reset encoder counts
@@ -266,11 +310,12 @@ void move_right_window(int percent, double inches)
     right_encoder.ResetCounts();
     left_encoder.ResetCounts();
 
+    //Set motors to desired power
     backward_motor.SetPercent((actual_power*percent*0.6));
     right_motor.SetPercent(actual_power*-2.0*percent);
     left_motor.SetPercent(actual_power*-2.0*percent);
     
-    //While the average of the left and back encoder is less than counts,
+    //While the average of the left, right, and back encoder is less than counts,
     //keep running motors
     while((right_encoder.Counts() + backward_encoder.Counts()) + left_encoder.Counts()/ 3. < (inches-1.2)*one_inch);
 
@@ -280,6 +325,8 @@ void move_right_window(int percent, double inches)
     left_motor.Stop();
 }
 
+//Moves the robot LEFT SPECIFICALLY FOR THE WINDOW, assumes robot is in place
+//Takes in a movement speed and distance traveled
 void move_left_window(int percent, double inches)
 {
     //Reset encoder counts
@@ -287,11 +334,12 @@ void move_left_window(int percent, double inches)
     right_encoder.ResetCounts();
     left_encoder.ResetCounts();
 
+    //Set motors to desired power
     backward_motor.SetPercent((actual_power*-percent*0.6));
     right_motor.SetPercent(actual_power*2.0*percent);
     left_motor.SetPercent(actual_power*2.0*percent);
     
-    //While the average of the left and back encoder is less than counts,
+    //While the average of the left, right, and back encoder is less than counts,
     //keep running motors
     while((right_encoder.Counts() + backward_encoder.Counts()) + left_encoder.Counts()/ 3. < (inches-1.2)*one_inch);
 
@@ -301,19 +349,21 @@ void move_left_window(int percent, double inches)
     left_motor.Stop();
 }
 
+//Where the main code is written
+//Feel free to add other functions, such as movements specifically for the wedge of the robot
 int main(void)
 {
     /*0. Initialize variables*/
     float x, y; 
-    // RCS.InitializeTouchMenu("0800A9VHR"); // This is our team code
-    // int lever = RCS.GetLever(); // Get a 0, 1, or 2 indicating which lever to pull
+    //RCS.InitializeTouchMenu("0800A9VHR"); // Code communicating with the RCS
+    //int lever = RCS.GetLever(); // Get a 0, 1, or 2 indicating which lever to pull
 
     /*Testing*/
-    /*1. Touch to start robot*/
+    /*0. Touch to start robot/Starting information*/
     LCD.Clear(BLACK);
     LCD.SetFontColor(WHITE);
     LCD.WriteLine("Touch the screen");
-    // if(lever == 0){
+    // if(lever == 0){  //Displays the lever information, taken out for sake of being time consumming, required for actual run
     //     LCD.WriteLine("Lever: A");
     // }
     // else if(lever == 1){
@@ -329,44 +379,26 @@ int main(void)
     LCD.WriteLine(Battery.Voltage());
     while(!LCD.Touch(&x,&y));
     while(LCD.Touch(&x,&y));   
-    while(CdS_cell.Value()>red_value); 
+    //while(CdS_cell.Value()>red_value); //Moves only when light is detected
 
-    /*2. Move up to compost*/
-    move_forward(30, 30, 5);
-    Sleep(0.5);
+    /*1. Position to first task*/
+    // move_forward(30, 30, 6);
+    // move_right(30, 3);
+    // move_forward(40, 40, 36);
+    // turn_left(30, 90);
+    // move_forward(-30, -30, 3);
+    // move_right(30, 4);
+    move_right_lever(30, 10);
 
-    /*3. First turn*/
-    move_left(30, 5.0);
-    Sleep(0.5);
-    turn_left(40, 90);
-    Sleep(0.5);
-    move_forward(-30, -30, 4.0);
-    Sleep(0.5);
-    turn_right(30, 80);
-    Sleep(0.5);
-    move_left(30, 3.0);
+    /*2. LEVERS*/
 
-    /*4. Second turn*/
-    move_left(30, 4.0);
-    Sleep(0.5);
-    turn_left(40, 80);
-    Sleep(0.5);
-    move_forward(-30, -30, 4.0);
-    Sleep(0.5);
-    turn_right(30, 80);
-    Sleep(0.5);
-    move_left(30, 4.0);
+    /*3. BUTTONS*/
 
-    /*5. Last turn*/
-    move_left(40, 4.0);
-    Sleep(0.5);
-    turn_left(50, 85);
-    Sleep(0.5);
+    /*4. WINDOW*/
 
-    /*6. Hit button*/
-    move_left(30, 9.0);
-    turn_right(30, 90);
-    move_forward(-30, -30, 5);
+    /*5. APPLE BUCKET*/
+
+    /*6. COMPOST*/
 
     return 0;
 }
